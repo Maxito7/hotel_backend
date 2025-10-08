@@ -22,10 +22,16 @@ func NewContactRepository(db *sql.DB) ContactRepository {
 }
 
 func (r *contactRepository) Create(ctx context.Context, req domain.CreateContactRequest) (int64, error) {
-	query := `INSERT INTO FormularioContacto (nombre, email, telefono, mensaje, estado)
-			  VALUES ($1, $2, $3, $4, 'Nuevo') RETURNING formularioId`
+	query := `
+    INSERT INTO formulariocontacto (nombre, email, telefono, mensaje, estado)
+    VALUES ($1, $2, $3, $4, 'Nuevo')
+    RETURNING formularioid
+`
+
 	var id int64
-	err := r.db.QueryRowContext(ctx, query, req.Nombre, req.Email, req.Telefono, req.Mensaje).Scan(&id)
+	err := r.db.QueryRowContext(ctx, query,
+		req.Nombre, req.Email, req.Telefono, req.Mensaje,
+	).Scan(&id)
 	return id, err
 }
 
