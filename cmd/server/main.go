@@ -50,6 +50,7 @@ func main() {
 	// Rutas de habitaciones
 	habitaciones.Get("/", habitacionHandler.GetAllRooms)
 	habitaciones.Get("/disponibles", habitacionHandler.GetAvailableRooms)
+	habitaciones.Get("/fechas-bloqueadas", habitacionHandler.GetFechasBloqueadas)
 
 	// Iniciar servidor
 	log.Printf("Server starting on port %s", cfg.ServerPort)
