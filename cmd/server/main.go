@@ -36,7 +36,14 @@ func main() {
 	app := fiber.New()
 
 	// Configurar CORS
-	app.Use(cors.New())
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     "http://localhost:3000", // URL de tu frontend Next.js
+		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
+		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
+		AllowCredentials: true,
+		ExposeHeaders:    "Content-Length",
+		MaxAge:           86400, // 24 horas en segundos
+	}))
 
 	// Inicializar dependencias
 	habitacionRepo := repository.NewHabitacionRepository(db)
@@ -50,6 +57,7 @@ func main() {
 	// Rutas de habitaciones
 	habitaciones.Get("/", habitacionHandler.GetAllRooms)
 	habitaciones.Get("/disponibles", habitacionHandler.GetAvailableRooms)
+	habitaciones.Get("/fechas-bloqueadas", habitacionHandler.GetFechasBloqueadas)
 
 	// Iniciar servidor
 	log.Printf("Server starting on port %s", cfg.ServerPort)

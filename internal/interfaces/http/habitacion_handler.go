@@ -37,6 +37,58 @@ func (h *HabitacionHandler) GetAllRooms(c *fiber.Ctx) error {
 	return c.JSON(habitaciones)
 }
 
+func (h *HabitacionHandler) GetFechasBloqueadas(c *fiber.Ctx) error {
+	// Obtener parámetros de consulta
+	desdeStr := c.Query("desde")
+	hastaStr := c.Query("hasta", "") // Si no se proporciona, usaremos 3 meses por defecto
+
+	// Parsear fecha desde
+	desde, err := time.Parse("2006-01-02", desdeStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid desde format. Use YYYY-MM-DD",
+		})
+	}
+
+	// Si no se proporciona fecha hasta, usar 3 meses después de desde
+	var hasta time.Time
+	if hastaStr == "" {
+		hasta = desde.AddDate(0, 3, 0) // 3 meses después
+	} else {
+		hasta, err = time.Parse("2006-01-02", hastaStr)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Invalid hasta format. Use YYYY-MM-DD",
+			})
+		}
+	}
+
+	// Validar que desde sea menor o igual que hasta
+	if desde.After(hasta) {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "desde must be before or equal to hasta",
+		})
+	}
+
+	// Validar que desde no sea anterior a hoy
+	if desde.Before(time.Now().Truncate(24 * time.Hour)) {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "desde cannot be before today",
+		})
+	}
+
+	// Obtener fechas bloqueadas
+	fechasBloqueadas, err := h.service.GetFechasBloqueadas(desde, hasta)
+	if err != nil {
+		log.Printf("Error en GetFechasBloqueadas: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": fmt.Sprintf("Error al obtener las fechas bloqueadas: %v", err),
+		})
+	}
+
+	return c.JSON(fechasBloqueadas)
+}
+
 func (h *HabitacionHandler) GetAvailableRooms(c *fiber.Ctx) error {
 	// Parse query parameters
 	fechaEntradaStr := c.Query("fechaEntrada")
