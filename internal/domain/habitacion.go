@@ -25,10 +25,26 @@ type Habitacion struct {
 	MediaID            int            `json:"-"` // El tag "-" hace que este campo se omita en la serialización JSON
 }
 
+// FechasBloqueadas representa las fechas donde no hay disponibilidad
+type FechasBloqueadas struct {
+	FechasNoDisponibles []time.Time `json:"fechasNoDisponibles"`
+}
+
+// DisponibilidadFecha representa la disponibilidad de habitaciones para una fecha específica
+type DisponibilidadFecha struct {
+	Fecha        time.Time `json:"fecha"`
+	Disponible   bool      `json:"disponible"`
+	Habitaciones int       `json:"habitaciones"`
+}
+
 // HabitacionRepository defines the interface for room data operations
 type HabitacionRepository interface {
 	// GetAllRooms returns all rooms in the system
 	GetAllRooms() ([]Habitacion, error)
 	// GetAvailableRooms returns rooms that are available for the given date range
 	GetAvailableRooms(fechaEntrada, fechaSalida time.Time) ([]Habitacion, error)
+	// GetFechasBloqueadas returns dates where there are no rooms available
+	GetFechasBloqueadas(desde time.Time, hasta time.Time) (*FechasBloqueadas, error)
+	// GetDisponibilidadFechas returns the availability status for each date in the given range
+	GetDisponibilidadFechas(desde time.Time, hasta time.Time) ([]DisponibilidadFecha, error)
 }
