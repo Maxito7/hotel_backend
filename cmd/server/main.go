@@ -50,6 +50,10 @@ func main() {
 	habitacionService := application.NewHabitacionService(habitacionRepo)
 	habitacionHandler := handlers.NewHabitacionHandler(habitacionService)
 
+	contactRepo := repository.NewContactRepository(db)
+	contactService := application.NewContactService(contactRepo)
+	contactHandler := handlers.NewContactHandler(contactService)
+
 	// Configurar rutas
 	api := app.Group("/api")
 	habitaciones := api.Group("/habitaciones")
@@ -58,6 +62,12 @@ func main() {
 	habitaciones.Get("/", habitacionHandler.GetAllRooms)
 	habitaciones.Get("/disponibles", habitacionHandler.GetAvailableRooms)
 	habitaciones.Get("/fechas-bloqueadas", habitacionHandler.GetFechasBloqueadas)
+
+	// Rutas de contacto
+	contacto := api.Group("/contact")
+	contacto.Post("/", contactHandler.Create)
+	contacto.Get("/", contactHandler.List)
+	contacto.Patch("/:id/estado", contactHandler.UpdateEstado)
 
 	// Iniciar servidor
 	log.Printf("Server starting on port %s", cfg.ServerPort)
