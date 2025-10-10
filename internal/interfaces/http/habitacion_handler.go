@@ -9,6 +9,35 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// Zona horaria de Perú (UTC-5)
+var peruLocation *time.Location
+
+func init() {
+	var err error
+	peruLocation, err = time.LoadLocation("America/Lima")
+	if err != nil {
+		// Fallback a UTC-5 si no se puede cargar la zona horaria
+		peruLocation = time.FixedZone("PET", -5*60*60)
+	}
+}
+
+// parseDatePeru parsea una fecha en formato YYYY-MM-DD y la retorna en zona horaria de Perú
+func parseDatePeru(dateStr string) (time.Time, error) {
+	// Parsear en UTC primero y luego convertir a zona horaria de Perú
+	utcTime, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return time.Time{}, err
+	}
+	// Crear la fecha en zona horaria de Perú a las 00:00:00
+	return time.Date(utcTime.Year(), utcTime.Month(), utcTime.Day(), 0, 0, 0, 0, peruLocation), nil
+}
+
+// getTodayPeru retorna la fecha de hoy a las 00:00:00 en zona horaria de Perú
+func getTodayPeru() time.Time {
+	now := time.Now().In(peruLocation)
+	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, peruLocation)
+}
+
 type HabitacionHandler struct {
 	service *application.HabitacionService
 }
@@ -43,7 +72,7 @@ func (h *HabitacionHandler) GetFechasBloqueadas(c *fiber.Ctx) error {
 	hastaStr := c.Query("hasta", "") // Si no se proporciona, usaremos 3 meses por defecto
 
 	// Parsear fecha desde
-	desde, err := time.Parse("2006-01-02", desdeStr)
+	desde, err := parseDatePeru(desdeStr)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid desde format. Use YYYY-MM-DD",
@@ -55,7 +84,7 @@ func (h *HabitacionHandler) GetFechasBloqueadas(c *fiber.Ctx) error {
 	if hastaStr == "" {
 		hasta = desde.AddDate(0, 3, 0) // 3 meses después
 	} else {
-		hasta, err = time.Parse("2006-01-02", hastaStr)
+		hasta, err = parseDatePeru(hastaStr)
 		if err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"error": "Invalid hasta format. Use YYYY-MM-DD",
@@ -71,7 +100,8 @@ func (h *HabitacionHandler) GetFechasBloqueadas(c *fiber.Ctx) error {
 	}
 
 	// Validar que desde no sea anterior a hoy
-	if desde.Before(time.Now().Truncate(24 * time.Hour)) {
+	hoy := getTodayPeru()
+	if desde.Before(hoy) {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "desde cannot be before today",
 		})
@@ -101,14 +131,14 @@ func (h *HabitacionHandler) GetAvailableRooms(c *fiber.Ctx) error {
 	}
 
 	// Parse dates
-	fechaEntrada, err := time.Parse("2006-01-02", fechaEntradaStr)
+	fechaEntrada, err := parseDatePeru(fechaEntradaStr)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid fechaEntrada format. Use YYYY-MM-DD",
 		})
 	}
 
-	fechaSalida, err := time.Parse("2006-01-02", fechaSalidaStr)
+	fechaSalida, err := parseDatePeru(fechaSalidaStr)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid fechaSalida format. Use YYYY-MM-DD",
@@ -119,6 +149,14 @@ func (h *HabitacionHandler) GetAvailableRooms(c *fiber.Ctx) error {
 	if fechaEntrada.After(fechaSalida) {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "fechaEntrada must be before fechaSalida",
+		})
+	}
+
+	// Validar que fechaEntrada no sea anterior a hoy
+	hoy := getTodayPeru()
+	if fechaEntrada.Before(hoy) {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "fechaEntrada cannot be before today",
 		})
 	}
 
