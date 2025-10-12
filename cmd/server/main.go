@@ -8,6 +8,7 @@ import (
 	"github.com/Maxito7/hotel_backend/internal/config"
 	"github.com/Maxito7/hotel_backend/internal/infrastructure/repository"
 	handlers "github.com/Maxito7/hotel_backend/internal/interfaces/http"
+	"github.com/Maxito7/hotel_backend/internal/tavily"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	_ "github.com/lib/pq" // Driver de PostgreSQL
@@ -62,6 +63,12 @@ func main() {
 	habitaciones.Get("/", habitacionHandler.GetAllRooms)
 	habitaciones.Get("/disponibles", habitacionHandler.GetAvailableRooms)
 	habitaciones.Get("/fechas-bloqueadas", habitacionHandler.GetFechasBloqueadas)
+	tavilyClient := tavily.NewClient(cfg.TavilyAPIKey)
+
+	searchService := application.NewSearchService(tavilyClient)
+	searchHandler := handlers.NewSearchHandler(searchService)
+
+	api.Post("/search", searchHandler.Search)
 
 	// Rutas de contacto
 	contacto := api.Group("/contact")

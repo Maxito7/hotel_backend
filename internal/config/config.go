@@ -8,12 +8,13 @@ import (
 )
 
 type Config struct {
-	DBHost     string
-	DBPort     string
-	DBUser     string
-	DBPassword string
-	DBName     string
-	ServerPort string
+	DBHost       string
+	DBPort       string
+	DBUser       string
+	DBPassword   string
+	DBName       string
+	ServerPort   string
+	TavilyAPIKey string
 }
 
 func LoadConfig() (*Config, error) {
@@ -22,12 +23,13 @@ func LoadConfig() (*Config, error) {
 	_ = godotenv.Load()
 
 	config := &Config{
-		DBHost:     getEnv("DB_HOST", "localhost"),
-		DBPort:     getEnv("DB_PORT", "5432"),
-		DBUser:     getEnv("DB_USER", "postgres"),
-		DBPassword: getEnv("DB_PASSWORD", ""),
-		DBName:     getEnv("DB_NAME", "postgres"),
-		ServerPort: getEnv("SERVER_PORT", "8000"),
+		DBHost:       getEnv("DB_HOST", "localhost"),
+		DBPort:       getEnv("DB_PORT", "5432"),
+		DBUser:       getEnv("DB_USER", "postgres"),
+		DBPassword:   getEnv("DB_PASSWORD", ""),
+		DBName:       getEnv("DB_NAME", "postgres"),
+		ServerPort:   getEnv("SERVER_PORT", "8000"),
+		TavilyAPIKey: getEnv("TAVILY_API_KEY", ""),
 	}
 
 	// Validar que las variables requeridas no estén vacías
