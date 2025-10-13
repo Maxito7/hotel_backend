@@ -15,6 +15,7 @@ type Config struct {
 	DBName       string
 	ServerPort   string
 	TavilyAPIKey string
+	OpenAIAPIKey string
 }
 
 func LoadConfig() (*Config, error) {
@@ -30,6 +31,7 @@ func LoadConfig() (*Config, error) {
 		DBName:       getEnv("DB_NAME", "postgres"),
 		ServerPort:   getEnv("SERVER_PORT", "8000"),
 		TavilyAPIKey: getEnv("TAVILY_API_KEY", ""),
+		OpenAIAPIKey: getEnv("OPENAI_API_KEY", ""),
 	}
 
 	// Validar que las variables requeridas no estén vacías
