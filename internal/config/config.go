@@ -8,14 +8,20 @@ import (
 )
 
 type Config struct {
-	DBHost       string
-	DBPort       string
-	DBUser       string
-	DBPassword   string
-	DBName       string
-	ServerPort   string
-	TavilyAPIKey string
-	OpenAIAPIKey string
+	DBHost        string
+	DBPort        string
+	DBUser        string
+	DBPassword    string
+	DBName        string
+	ServerPort    string
+	TavilyAPIKey  string
+	OpenAIAPIKey  string
+	SMTPHost      string
+	SMTPPort      string
+	SMTPUser      string
+	SMTPPassword  string
+	SMTPFromName  string
+	SMTPFromEmail string
 }
 
 func LoadConfig() (*Config, error) {
@@ -24,14 +30,20 @@ func LoadConfig() (*Config, error) {
 	_ = godotenv.Load()
 
 	config := &Config{
-		DBHost:       getEnv("DB_HOST", "localhost"),
-		DBPort:       getEnv("DB_PORT", "5432"),
-		DBUser:       getEnv("DB_USER", "postgres"),
-		DBPassword:   getEnv("DB_PASSWORD", ""),
-		DBName:       getEnv("DB_NAME", "postgres"),
-		ServerPort:   getEnv("SERVER_PORT", "8000"),
-		TavilyAPIKey: getEnv("TAVILY_API_KEY", ""),
-		OpenAIAPIKey: getEnv("OPENAI_API_KEY", ""),
+		DBHost:        getEnv("DB_HOST", "localhost"),
+		DBPort:        getEnv("DB_PORT", "5432"),
+		DBUser:        getEnv("DB_USER", "postgres"),
+		DBPassword:    getEnv("DB_PASSWORD", ""),
+		DBName:        getEnv("DB_NAME", "postgres"),
+		ServerPort:    getEnv("SERVER_PORT", "8000"),
+		TavilyAPIKey:  getEnv("TAVILY_API_KEY", ""),
+		OpenAIAPIKey:  getEnv("OPENAI_API_KEY", ""),
+		SMTPHost:      getEnv("SMTP_HOST", "smtp.gmail.com"),
+		SMTPPort:      getEnv("SMTP_PORT", "587"),
+		SMTPUser:      getEnv("SMTP_USER", ""),
+		SMTPPassword:  getEnv("SMTP_PASSWORD", ""),
+		SMTPFromName:  getEnv("SMTP_FROM_NAME", "Hotel Reservas"),
+		SMTPFromEmail: getEnv("SMTP_FROM_EMAIL", ""),
 	}
 
 	// Validar que las variables requeridas no estén vacías
