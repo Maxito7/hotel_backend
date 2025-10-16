@@ -47,4 +47,6 @@ type HabitacionRepository interface {
 	GetFechasBloqueadas(desde time.Time, hasta time.Time) (*FechasBloqueadas, error)
 	// GetDisponibilidadFechas returns the availability status for each date in the given range
 	GetDisponibilidadFechas(desde time.Time, hasta time.Time) ([]DisponibilidadFecha, error)
+	// GetRoomTypes returns all available room types
+	GetRoomTypes() ([]TipoHabitacion, error)
 }

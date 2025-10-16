@@ -271,3 +271,47 @@ func (r *habitacionRepository) GetAvailableRooms(fechaEntrada, fechaSalida time.
 
 	return habitaciones, nil
 }
+
+// GetRoomTypes returns all available room types
+func (r *habitacionRepository) GetRoomTypes() ([]domain.TipoHabitacion, error) {
+	query := `
+		SELECT 
+			t.tipohabitacionid,
+			t.titulo,
+			t.descripcion,
+			t.capacidadadultos,
+			t.capacidadninhos,
+			t.cantidadcamas,
+			t.precio
+		FROM tipohabitacion t
+		ORDER BY t.tipohabitacionid;`
+
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("error querying room types: %w", err)
+	}
+	defer rows.Close()
+
+	var tipos []domain.TipoHabitacion
+	for rows.Next() {
+		var t domain.TipoHabitacion
+		if err := rows.Scan(
+			&t.ID,
+			&t.Titulo,
+			&t.Descripcion,
+			&t.CapacidadAdultos,
+			&t.CapacidadNinhos,
+			&t.CantidadCamas,
+			&t.Precio,
+		); err != nil {
+			return nil, fmt.Errorf("error scanning room type: %w", err)
+		}
+		tipos = append(tipos, t)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating room types: %w", err)
+	}
+
+	return tipos, nil
+}

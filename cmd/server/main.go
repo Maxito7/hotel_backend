@@ -68,6 +68,7 @@ func main() {
 	// Rutas existentes
 	habitaciones := api.Group("/habitaciones")
 	habitaciones.Get("/", habitacionHandler.GetAllRooms)
+	habitaciones.Get("/tipos", habitacionHandler.GetRoomTypes)
 	habitaciones.Get("/disponibles", habitacionHandler.GetAvailableRooms)
 	habitaciones.Get("/fechas-bloqueadas", habitacionHandler.GetFechasBloqueadas)
 
