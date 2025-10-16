@@ -6,6 +6,7 @@ import (
 
 	"github.com/Maxito7/hotel_backend/internal/application"
 	"github.com/Maxito7/hotel_backend/internal/config"
+	"github.com/Maxito7/hotel_backend/internal/email"
 	"github.com/Maxito7/hotel_backend/internal/infrastructure/repository"
 	handlers "github.com/Maxito7/hotel_backend/internal/interfaces/http"
 	"github.com/Maxito7/hotel_backend/internal/openai"
@@ -47,11 +48,6 @@ func main() {
 	habitacionService := application.NewHabitacionService(habitacionRepo)
 	habitacionHandler := handlers.NewHabitacionHandler(habitacionService)
 
-	// Contacto
-	contactRepo := repository.NewContactRepository(db)
-	contactService := application.NewContactService(contactRepo)
-	contactHandler := handlers.NewContactHandler(contactService)
-
 	// Search
 	tavilyClient := tavily.NewClient(cfg.TavilyAPIKey)
 	searchService := application.NewSearchService(tavilyClient)
@@ -62,6 +58,31 @@ func main() {
 	chatbotRepo := repository.NewChatbotRepository(db)
 	chatbotService := application.NewChatbotService(chatbotRepo, openaiClient, habitacionRepo)
 	chatbotHandler := handlers.NewChatbotHandler(chatbotService)
+
+	// Email Client
+	emailClient, err := email.NewClient(
+		cfg.SMTPHost,
+		cfg.SMTPPort,
+		cfg.SMTPUser,
+		cfg.SMTPPassword,
+		cfg.SMTPFromName,
+		cfg.SMTPFromEmail,
+	)
+	if err != nil {
+		log.Printf("Warning: Email client initialization failed: %v", err)
+		emailClient = nil // Continuar sin email
+	}
+
+	// Contacto (después del email client)
+	contactRepo := repository.NewContactRepository(db)
+	contactService := application.NewContactService(contactRepo, emailClient)
+	contactHandler := handlers.NewContactHandler(contactService)
+
+	// Reservas
+	reservaRepo := repository.NewReservaRepository(db)
+	reservaHabitacionRepo := repository.NewReservaHabitacionRepository(db)
+	reservaService := application.NewReservaService(reservaRepo, reservaHabitacionRepo, habitacionRepo, emailClient)
+	reservaHandler := handlers.NewReservaHandler(reservaService)
 
 	api := app.Group("/api")
 
@@ -84,6 +105,18 @@ func main() {
 	chatbot.Post("/chat", chatbotHandler.Chat)
 	chatbot.Get("/conversation/:id", chatbotHandler.GetConversation)
 	chatbot.Get("/client/:clienteId/conversations", chatbotHandler.GetClientConversations)
+
+	// Rutas de reservas
+	reservas := api.Group("/reservas")
+	reservas.Post("/", reservaHandler.CreateReserva)
+	reservas.Get("/:id", reservaHandler.GetReservaByID)
+	reservas.Get("/cliente/:clienteId", reservaHandler.GetReservasCliente)
+	reservas.Patch("/:id/estado", reservaHandler.UpdateReservaEstado)
+	reservas.Post("/:id/cancelar", reservaHandler.CancelarReserva)
+	reservas.Post("/:id/confirmar", reservaHandler.ConfirmarReserva)
+	reservas.Post("/:id/confirmar-pago", reservaHandler.ConfirmarPago) // NUEVO: Confirma pago y envía email
+	reservas.Post("/verificar-disponibilidad", reservaHandler.VerificarDisponibilidad)
+	reservas.Get("/rango", reservaHandler.GetReservasEnRango)
 
 	log.Printf("Server starting on port %s", cfg.ServerPort)
 	if err := app.Listen(":" + cfg.ServerPort); err != nil {
