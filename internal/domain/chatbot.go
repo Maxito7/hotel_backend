@@ -12,6 +12,8 @@ type ChatRequest struct {
 	ConversationID *string      `json:"conversationId,omitempty"`
 	ClienteID      *int         `json:"clienteId,omitempty"`
 	Context        *ChatContext `json:"context,omitempty"`
+	// UseWeb: nil = auto (service decides), true = force web search, false = disable web search
+	UseWeb *bool `json:"useWeb,omitempty"`
 }
 
 type ChatContext struct {

@@ -8,14 +8,15 @@ import (
 )
 
 type Config struct {
-	DBHost       string
-	DBPort       string
-	DBUser       string
-	DBPassword   string
-	DBName       string
-	ServerPort   string
-	TavilyAPIKey string
-	OpenAIAPIKey string
+	DBHost        string
+	DBPort        string
+	DBUser        string
+	DBPassword    string
+	DBName        string
+	ServerPort    string
+	TavilyAPIKey  string
+	OpenAIAPIKey  string
+	HotelLocation string `env:"HOTEL_LOCATION" json:"hotel_location"`
 }
 
 func LoadConfig() (*Config, error) {
@@ -24,14 +25,15 @@ func LoadConfig() (*Config, error) {
 	_ = godotenv.Load()
 
 	config := &Config{
-		DBHost:       getEnv("DB_HOST", "localhost"),
-		DBPort:       getEnv("DB_PORT", "5432"),
-		DBUser:       getEnv("DB_USER", "postgres"),
-		DBPassword:   getEnv("DB_PASSWORD", ""),
-		DBName:       getEnv("DB_NAME", "postgres"),
-		ServerPort:   getEnv("SERVER_PORT", "8000"),
-		TavilyAPIKey: getEnv("TAVILY_API_KEY", ""),
-		OpenAIAPIKey: getEnv("OPENAI_API_KEY", ""),
+		DBHost:        getEnv("DB_HOST", "localhost"),
+		DBPort:        getEnv("DB_PORT", "5432"),
+		DBUser:        getEnv("DB_USER", "postgres"),
+		DBPassword:    getEnv("DB_PASSWORD", ""),
+		DBName:        getEnv("DB_NAME", "postgres"),
+		ServerPort:    getEnv("SERVER_PORT", "8000"),
+		TavilyAPIKey:  getEnv("TAVILY_API_KEY", ""),
+		OpenAIAPIKey:  getEnv("OPENAI_API_KEY", ""),
+		HotelLocation: getEnv("HOTEL_LOCATION", ""),
 	}
 
 	// Validar que las variables requeridas no estén vacías
@@ -50,8 +52,8 @@ func (c *Config) GetDBConnString() string {
 
 // String implementa la interfaz Stringer para evitar que se impriman datos sensibles en logs
 func (c Config) String() string {
-	return fmt.Sprintf("Config{DBHost: %s, DBPort: %s, DBUser: %s, DBPassword: [HIDDEN], DBName: %s, ServerPort: %s}",
-		c.DBHost, c.DBPort, c.DBUser, c.DBName, c.ServerPort)
+	return fmt.Sprintf("Config{DBHost: %s, DBPort: %s, DBUser: %s, DBPassword: [HIDDEN], DBName: %s, ServerPort: %s, HotelLocation: %s}",
+		c.DBHost, c.DBPort, c.DBUser, c.DBName, c.ServerPort, c.HotelLocation)
 }
 
 // getEnv obtiene una variable de entorno o devuelve un valor por defecto
