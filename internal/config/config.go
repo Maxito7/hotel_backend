@@ -16,12 +16,7 @@ type Config struct {
 	ServerPort    string
 	TavilyAPIKey  string
 	OpenAIAPIKey  string
-	SMTPHost      string
-	SMTPPort      string
-	SMTPUser      string
-	SMTPPassword  string
-	SMTPFromName  string
-	SMTPFromEmail string
+	HotelLocation string `env:"HOTEL_LOCATION" json:"hotel_location"`
 }
 
 func LoadConfig() (*Config, error) {
@@ -38,12 +33,7 @@ func LoadConfig() (*Config, error) {
 		ServerPort:    getEnv("SERVER_PORT", "8000"),
 		TavilyAPIKey:  getEnv("TAVILY_API_KEY", ""),
 		OpenAIAPIKey:  getEnv("OPENAI_API_KEY", ""),
-		SMTPHost:      getEnv("SMTP_HOST", "smtp.gmail.com"),
-		SMTPPort:      getEnv("SMTP_PORT", "587"),
-		SMTPUser:      getEnv("SMTP_USER", ""),
-		SMTPPassword:  getEnv("SMTP_PASSWORD", ""),
-		SMTPFromName:  getEnv("SMTP_FROM_NAME", "Hotel Reservas"),
-		SMTPFromEmail: getEnv("SMTP_FROM_EMAIL", ""),
+		HotelLocation: getEnv("HOTEL_LOCATION", ""),
 	}
 
 	// Validar que las variables requeridas no estén vacías
@@ -62,8 +52,8 @@ func (c *Config) GetDBConnString() string {
 
 // String implementa la interfaz Stringer para evitar que se impriman datos sensibles en logs
 func (c Config) String() string {
-	return fmt.Sprintf("Config{DBHost: %s, DBPort: %s, DBUser: %s, DBPassword: [HIDDEN], DBName: %s, ServerPort: %s}",
-		c.DBHost, c.DBPort, c.DBUser, c.DBName, c.ServerPort)
+	return fmt.Sprintf("Config{DBHost: %s, DBPort: %s, DBUser: %s, DBPassword: [HIDDEN], DBName: %s, ServerPort: %s, HotelLocation: %s}",
+		c.DBHost, c.DBPort, c.DBUser, c.DBName, c.ServerPort, c.HotelLocation)
 }
 
 // getEnv obtiene una variable de entorno o devuelve un valor por defecto

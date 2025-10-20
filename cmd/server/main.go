@@ -56,7 +56,7 @@ func main() {
 	// Chatbot - NUEVO
 	openaiClient := openai.NewClient(cfg.OpenAIAPIKey)
 	chatbotRepo := repository.NewChatbotRepository(db)
-	chatbotService := application.NewChatbotService(chatbotRepo, openaiClient, habitacionRepo)
+	chatbotService := application.NewChatbotService(chatbotRepo, openaiClient, habitacionRepo, tavilyClient, cfg.HotelLocation, searchService)
 	chatbotHandler := handlers.NewChatbotHandler(chatbotService)
 
 	// Email Client
