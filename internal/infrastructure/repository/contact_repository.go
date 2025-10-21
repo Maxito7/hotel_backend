@@ -23,9 +23,9 @@ func NewContactRepository(db *sql.DB) ContactRepository {
 
 func (r *contactRepository) Create(ctx context.Context, req domain.CreateContactRequest) (int64, error) {
 	query := `
-    INSERT INTO formulariocontacto (nombre, email, telefono, mensaje, estado)
+    INSERT INTO contact_form (name, email, phone, message, status)
     VALUES ($1, $2, $3, $4, 'Nuevo')
-    RETURNING formularioid
+    RETURNING form_id
 `
 
 	var id int64
@@ -37,8 +37,8 @@ func (r *contactRepository) Create(ctx context.Context, req domain.CreateContact
 
 func (r *contactRepository) List(ctx context.Context) ([]domain.Contact, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT formularioId, nombre, email, telefono, mensaje, estado, fechaEnvio, fechaRespuesta
-		FROM FormularioContacto ORDER BY fechaEnvio DESC`)
+		SELECT form_id, name, email, phone, message, status, sent_date, response_date
+		FROM contact_form ORDER BY sent_date DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func (r *contactRepository) List(ctx context.Context) ([]domain.Contact, error) 
 
 func (r *contactRepository) UpdateEstado(ctx context.Context, id int64, estado domain.EstadoFormulario) error {
 	_, err := r.db.ExecContext(ctx,
-		`UPDATE FormularioContacto SET estado=$1, fechaRespuesta=NOW() WHERE formularioId=$2`,
+		`UPDATE contact_form SET status=$1, response_date=NOW() WHERE form_id=$2`,
 		estado, id)
 	return err
 }

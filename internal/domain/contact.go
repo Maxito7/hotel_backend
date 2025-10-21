@@ -12,15 +12,15 @@ const (
 )
 
 type Contact struct {
-	ID             int64            `db:"formularioId" json:"id"`
-	UsuarioID      *int64           `db:"usuarioId" json:"usuarioId,omitempty"`
-	Nombre         string           `db:"nombre" json:"nombre"`
+	ID             int64            `db:"form_id" json:"id"`
+	UsuarioID      *int64           `db:"user_id" json:"usuarioId,omitempty"`
+	Nombre         string           `db:"name" json:"nombre"`
 	Email          string           `db:"email" json:"email"`
-	Telefono       *string          `db:"telefono" json:"telefono,omitempty"`
-	Mensaje        *string          `db:"mensaje" json:"mensaje,omitempty"`
-	Estado         EstadoFormulario `db:"estado" json:"estado"`
-	FechaEnvio     time.Time        `db:"fechaEnvio" json:"fechaEnvio"`
-	FechaRespuesta *time.Time       `db:"fechaRespuesta" json:"fechaRespuesta,omitempty"`
+	Telefono       *string          `db:"phone" json:"telefono,omitempty"`
+	Mensaje        *string          `db:"message" json:"mensaje,omitempty"`
+	Estado         EstadoFormulario `db:"status" json:"estado"`
+	FechaEnvio     time.Time        `db:"sent_date" json:"fechaEnvio"`
+	FechaRespuesta *time.Time       `db:"response_date" json:"fechaRespuesta,omitempty"`
 }
 
 type CreateContactRequest struct {
