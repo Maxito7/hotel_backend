@@ -31,7 +31,7 @@ func (r *chatbotRepository) SaveConversation(conversation *domain.ConversationHi
 
 	query := `
 		INSERT INTO conversation_history 
-		(id, cliente_id, messages, created_at, updated_at) 
+		(id, client_id, messages, created_at, updated_at) 
 		VALUES ($1, $2, $3, $4, $5)
 	`
 
@@ -48,7 +48,7 @@ func (r *chatbotRepository) SaveConversation(conversation *domain.ConversationHi
 
 func (r *chatbotRepository) GetConversation(conversationID string) (*domain.ConversationHistory, error) {
 	query := `
-		SELECT id, cliente_id, messages, created_at, updated_at 
+		SELECT id, client_id, messages, created_at, updated_at 
 		FROM conversation_history 
 		WHERE id = $1
 	`
@@ -64,7 +64,6 @@ func (r *chatbotRepository) GetConversation(conversationID string) (*domain.Conv
 		&conversation.CreatedAt,
 		&conversation.UpdatedAt,
 	)
-
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -92,7 +91,7 @@ func (r *chatbotRepository) UpdateConversation(conversation *domain.Conversation
 
 	query := `
 		UPDATE conversation_history 
-		SET messages = $1, updated_at = $2, cliente_id = $3
+		SET messages = $1, updated_at = $2, client_id = $3
 		WHERE id = $4
 	`
 
@@ -108,7 +107,7 @@ func (r *chatbotRepository) UpdateConversation(conversation *domain.Conversation
 
 func (r *chatbotRepository) SaveMessage(clienteID int, contenido string) error {
 	query := `
-		INSERT INTO mensaje (contenido, clienteid, fecharegistro) 
+		INSERT INTO message (content, client_id, registration_date) 
 		VALUES ($1, $2, $3)
 	`
 
@@ -118,9 +117,9 @@ func (r *chatbotRepository) SaveMessage(clienteID int, contenido string) error {
 
 func (r *chatbotRepository) GetClientConversations(clienteID int) ([]domain.ConversationHistory, error) {
 	query := `
-		SELECT id, cliente_id, messages, created_at, updated_at 
+		SELECT id, client_id, messages, created_at, updated_at 
 		FROM conversation_history 
-		WHERE cliente_id = $1 
+		WHERE client_id = $1 
 		ORDER BY updated_at DESC
 	`
 
