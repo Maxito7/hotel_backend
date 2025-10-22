@@ -57,6 +57,11 @@ func main() {
 	searchService := application.NewSearchService(tavilyClient)
 	searchHandler := handlers.NewSearchHandler(searchService)
 
+	// Servicios
+	servicioRepo := repository.NewServicioRepository(db)
+	servicioService := application.NewServicioService(servicioRepo)
+	servicioHandler := handlers.NewServicioHandler(servicioService)
+
 	// Chatbot - NUEVO
 	openaiClient := openai.NewClient(cfg.OpenAIAPIKey)
 	chatbotRepo := repository.NewChatbotRepository(db)
@@ -70,6 +75,7 @@ func main() {
 	habitaciones.Get("/", habitacionHandler.GetAllRooms)
 	habitaciones.Get("/disponibles", habitacionHandler.GetAvailableRooms)
 	habitaciones.Get("/fechas-bloqueadas", habitacionHandler.GetFechasBloqueadas)
+	habitaciones.Get("/tipos", habitacionHandler.GetRoomTypes)
 
 	api.Post("/search", searchHandler.Search)
 
@@ -77,6 +83,10 @@ func main() {
 	contacto.Post("/", contactHandler.Create)
 	contacto.Get("/", contactHandler.List)
 	contacto.Patch("/:id/estado", contactHandler.UpdateEstado)
+
+	// Rutas de servicios
+	servicios := api.Group("/servicios")
+	servicios.Get("/all", servicioHandler.GetAllServices)
 
 	// Rutas del chatbot - NUEVO
 	chatbot := api.Group("/chatbot")

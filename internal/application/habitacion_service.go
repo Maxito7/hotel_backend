@@ -27,3 +27,7 @@ func (s *HabitacionService) GetAvailableRooms(fechaEntrada, fechaSalida time.Tim
 func (s *HabitacionService) GetFechasBloqueadas(desde, hasta time.Time) (*domain.FechasBloqueadas, error) {
 	return s.repo.GetFechasBloqueadas(desde, hasta)
 }
+
+func (s *HabitacionService) GetRoomTypes() ([]domain.TipoHabitacion, error) {
+	return s.repo.GetRoomTypes()
+}
