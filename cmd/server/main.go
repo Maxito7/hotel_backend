@@ -70,6 +70,7 @@ func main() {
 	habitaciones.Get("/", habitacionHandler.GetAllRooms)
 	habitaciones.Get("/disponibles", habitacionHandler.GetAvailableRooms)
 	habitaciones.Get("/fechas-bloqueadas", habitacionHandler.GetFechasBloqueadas)
+	habitaciones.Get("/tipos", habitacionHandler.GetRoomTypes)
 
 	api.Post("/search", searchHandler.Search)
 

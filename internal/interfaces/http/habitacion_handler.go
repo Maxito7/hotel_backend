@@ -66,6 +66,19 @@ func (h *HabitacionHandler) GetAllRooms(c *fiber.Ctx) error {
 	return c.JSON(habitaciones)
 }
 
+func (h *HabitacionHandler) GetRoomTypes(c *fiber.Ctx) error {
+	// Get all room types
+	roomTypes, err := h.service.GetRoomTypes()
+	if err != nil {
+		log.Printf("Error getting room types: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": fmt.Sprintf("Error al obtener los tipos de habitación: %v", err),
+		})
+	}
+
+	return c.JSON(roomTypes)
+}
+
 func (h *HabitacionHandler) GetFechasBloqueadas(c *fiber.Ctx) error {
 	// Obtener parámetros de consulta
 	desdeStr := c.Query("desde")
