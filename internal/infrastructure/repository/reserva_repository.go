@@ -113,7 +113,7 @@ func (r *reservaRepository) CreateReserva(reserva *domain.Reserva) error {
 
 	// Insertar la reserva principal
 	query := `
-		INSERT INTO reserva (
+		INSERT INTO reservation (
 			adults_count,
 			children_count,
 			status,
