@@ -20,16 +20,16 @@ func NewReservaRepository(db *sql.DB) domain.ReservaRepository {
 func (r *reservaRepository) GetReservaByID(id int) (*domain.Reserva, error) {
 	query := `
 		SELECT 
-			r.reservaid,
-			r.cantidadadultos,
-			r.cantidadniños,
-			r.estado,
-			r.clienteid,
+			r.reservation_id,
+			r.adults_count,
+			r.children_count,
+			r.status,
+			r.client_id,
 			r.subtotal,
-			r.descuento,
-			r.fechaconfirmacion
-		FROM reserva r
-		WHERE r.reservaid = $1
+			r.discount,
+			r.confirmation_date
+		FROM reservation r
+		WHERE r.reservation_id = $1
 	`
 
 	reserva := &domain.Reserva{}
@@ -54,18 +54,18 @@ func (r *reservaRepository) GetReservaByID(id int) (*domain.Reserva, error) {
 	// Obtener las habitaciones de la reserva
 	habitacionesQuery := `
 		SELECT 
-			rh.reservaid,
-			rh.habitacionid,
-			rh.precio,
-			rh.fechaentrada,
-			rh.fechasalida,
-			rh.estado,
-			h.nombre,
-			h.capacidad,
-			h.numero
-		FROM reservaxhabitacion rh
-		INNER JOIN habitacion h ON h.habitacionid = rh.habitacionid
-		WHERE rh.reservaid = $1 AND rh.estado = 1
+			rh.reservation_id,
+			rh.room_id,
+			rh.price,
+			rh.check_in_date,
+			rh.check_out_date,
+			rh.status,
+			h.name,
+			h.capacity,
+			h.number
+		FROM reservation_room rh
+		INNER JOIN room h ON h.room_id = rh.room_id
+		WHERE rh.reservation_id = $1 AND rh.status = 1
 	`
 
 	rows, err := r.db.Query(habitacionesQuery, id)
@@ -114,15 +114,15 @@ func (r *reservaRepository) CreateReserva(reserva *domain.Reserva) error {
 	// Insertar la reserva principal
 	query := `
 		INSERT INTO reserva (
-			cantidadadultos,
-			cantidadniños,
-			estado,
-			clienteid,
+			adults_count,
+			children_count,
+			status,
+			client_id,
 			subtotal,
-			descuento,
-			fechaconfirmacion
+			discount,
+			confirmation_date
 		) VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING reservaid
+		RETURNING reservation_id
 	`
 
 	err = tx.QueryRow(
@@ -143,13 +143,13 @@ func (r *reservaRepository) CreateReserva(reserva *domain.Reserva) error {
 	// Insertar las habitaciones de la reserva
 	for i := range reserva.Habitaciones {
 		habitacionQuery := `
-			INSERT INTO reservaxhabitacion (
-				reservaid,
-				habitacionid,
-				precio,
-				fechaentrada,
-				fechasalida,
-				estado
+			INSERT INTO reservation_room (
+				reservation_id,
+				room_id,
+				price,
+				check_in_date,
+				check_out_date,
+				status
 			) VALUES ($1, $2, $3, $4, $5, $6)
 		`
 
@@ -160,7 +160,7 @@ func (r *reservaRepository) CreateReserva(reserva *domain.Reserva) error {
 			reserva.Habitaciones[i].Precio,
 			reserva.Habitaciones[i].FechaEntrada,
 			reserva.Habitaciones[i].FechaSalida,
-			1, // Estado activo
+			1, // status activo
 		)
 
 		if err != nil {
@@ -178,17 +178,17 @@ func (r *reservaRepository) CreateReserva(reserva *domain.Reserva) error {
 	return nil
 }
 
-// UpdateReservaEstado actualiza el estado de una reserva
-func (r *reservaRepository) UpdateReservaEstado(id int, estado domain.EstadoReserva) error {
+// UpdateReservastatus actualiza el status de una reserva
+func (r *reservaRepository) UpdateReservaEstado(id int, status domain.EstadoReserva) error {
 	query := `
-		UPDATE reserva 
-		SET estado = $1 
-		WHERE reservaid = $2
+		UPDATE reservation 
+		SET status = $1 
+		WHERE reservation_id = $2
 	`
 
-	result, err := r.db.Exec(query, estado, id)
+	result, err := r.db.Exec(query, status, id)
 	if err != nil {
-		return fmt.Errorf("error al actualizar estado de reserva: %w", err)
+		return fmt.Errorf("error al actualizar status de reserva: %w", err)
 	}
 
 	rowsAffected, err := result.RowsAffected()
@@ -204,23 +204,23 @@ func (r *reservaRepository) UpdateReservaEstado(id int, estado domain.EstadoRese
 }
 
 // GetReservasCliente obtiene todas las reservas de un cliente
-func (r *reservaRepository) GetReservasCliente(clienteID string) ([]domain.Reserva, error) {
+func (r *reservaRepository) GetReservasCliente(client_id string) ([]domain.Reserva, error) {
 	query := `
 		SELECT 
-			r.reservaid,
-			r.cantidadadultos,
+			r.reservation_id,
+			r.adults_count,
 			r.cantidadniños,
-			r.estado,
-			r.clienteid,
+			r.status,
+			r.client_id,
 			r.subtotal,
-			r.descuento,
-			r.fechaconfirmacion
-		FROM reserva r
-		WHERE r.clienteid = $1
-		ORDER BY r.fechaconfirmacion DESC
+			r.discount,
+			r.confirmation_date
+		FROM reservation r
+		WHERE r.client_id = $1
+		ORDER BY r.confirmation_date DESC
 	`
 
-	rows, err := r.db.Query(query, clienteID)
+	rows, err := r.db.Query(query, client_id)
 	if err != nil {
 		return nil, fmt.Errorf("error al obtener reservas del cliente: %w", err)
 	}
@@ -246,18 +246,18 @@ func (r *reservaRepository) GetReservasCliente(clienteID string) ([]domain.Reser
 		// Obtener las habitaciones de cada reserva
 		habitacionesQuery := `
 			SELECT 
-				rh.reservaid,
-				rh.habitacionid,
-				rh.precio,
-				rh.fechaentrada,
-				rh.fechasalida,
-				rh.estado,
-				h.nombre,
-				h.capacidad,
-				h.numero
-			FROM reservaxhabitacion rh
-			INNER JOIN habitacion h ON h.habitacionid = rh.habitacionid
-			WHERE rh.reservaid = $1 AND rh.estado = 1
+				rh.reservation_id,
+				rh.room_id,
+				rh.price,
+				rh.check_in_date,
+				rh.check_out_date,
+				rh.status,
+				h.name,
+				h.capacity,
+				h.number
+			FROM reservation_room rh
+			INNER JOIN room h ON h.room_id = rh.room_id
+			WHERE rh.reservation_id = $1 AND rh.status = 1
 		`
 
 		habRows, err := r.db.Query(habitacionesQuery, reserva.ID)

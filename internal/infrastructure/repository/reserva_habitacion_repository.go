@@ -20,13 +20,13 @@ func NewReservaHabitacionRepository(db *sql.DB) domain.ReservaHabitacionReposito
 // CreateReservaHabitacion crea una nueva reserva de habitación
 func (r *reservaHabitacionRepository) CreateReservaHabitacion(reservaHabitacion *domain.ReservaHabitacion) error {
 	query := `
-		INSERT INTO reservaxhabitacion (
-			reservaid,
-			habitacionid,
-			precio,
-			fechaentrada,
-			fechasalida,
-			estado
+		INSERT INTO reservation_room (
+			reservation_id,
+			room_id,
+			price,
+			check_in_date,
+			check_out_date,
+			status
 		) VALUES ($1, $2, $3, $4, $5, $6)
 	`
 
@@ -51,18 +51,18 @@ func (r *reservaHabitacionRepository) CreateReservaHabitacion(reservaHabitacion 
 func (r *reservaHabitacionRepository) GetReservaHabitacionesByReservaID(reservaID int) ([]domain.ReservaHabitacion, error) {
 	query := `
 		SELECT 
-			rh.reservaid,
-			rh.habitacionid,
-			rh.precio,
-			rh.fechaentrada,
-			rh.fechasalida,
-			rh.estado,
-			h.nombre,
-			h.capacidad,
-			h.numero
-		FROM reservaxhabitacion rh
-		INNER JOIN habitacion h ON h.habitacionid = rh.habitacionid
-		WHERE rh.reservaid = $1
+			rh.reservation_id,
+			rh.room_id,
+			rh.price,
+			rh.check_in_date,
+			rh.check_out_date,
+			rh.status,
+			h.name,
+			h.capacity,
+			h.number
+		FROM reservation_room rh
+		INNER JOIN room h ON h.room_id = rh.room_id
+		WHERE rh.reservation_id = $1
 	`
 
 	rows, err := r.db.Query(query, reservaID)
@@ -102,9 +102,9 @@ func (r *reservaHabitacionRepository) GetReservaHabitacionesByReservaID(reservaI
 // UpdateReservaHabitacionEstado actualiza el estado de una reserva de habitación
 func (r *reservaHabitacionRepository) UpdateReservaHabitacionEstado(reservaID, habitacionID int, estado int) error {
 	query := `
-		UPDATE reservaxhabitacion 
-		SET estado = $1 
-		WHERE reservaid = $2 AND habitacionid = $3
+		UPDATE reservation_room 
+		SET status = $1 
+		WHERE reservation_id = $2 AND room_id = $3
 	`
 
 	result, err := r.db.Exec(query, estado, reservaID, habitacionID)
@@ -128,13 +128,13 @@ func (r *reservaHabitacionRepository) UpdateReservaHabitacionEstado(reservaID, h
 func (r *reservaHabitacionRepository) VerificarDisponibilidad(habitacionID int, fechaEntrada, fechaSalida time.Time) (bool, error) {
 	query := `
 		SELECT COUNT(*) 
-		FROM reservaxhabitacion rh
-		INNER JOIN reserva r ON r.reservaid = rh.reservaid
-		WHERE rh.habitacionid = $1 
-		AND rh.estado = 1
-		AND r.estado NOT IN ('Cancelada')
+		FROM reservation_room rh
+		INNER JOIN reservation r ON r.reservation_id = rh.reservation_id
+		WHERE rh.room_id = $1 
+		AND rh.status = 1
+		AND r.status NOT IN ('Cancelada')
 		AND (
-			(rh.fechaentrada < $3 AND rh.fechasalida > $2)
+			(rh.check_in_date < $3 AND rh.check_out_date > $2)
 		)
 	`
 
@@ -157,21 +157,21 @@ func (r *reservaHabitacionRepository) GetReservasEnRango(fechaInicio, fechaFin t
 			rh.precio,
 			rh.fechaentrada,
 			rh.fechasalida,
-			rh.estado,
-			h.nombre,
-			h.capacidad,
-			h.numero
-		FROM reservaxhabitacion rh
-		INNER JOIN habitacion h ON h.habitacionid = rh.habitacionid
-		INNER JOIN reserva r ON r.reservaid = rh.reservaid
-		WHERE rh.estado = 1
-		AND r.estado NOT IN ('Cancelada')
+			rh.status,
+			h.name,
+			h.capacity,
+			h.number
+		FROM reservation_room rh
+		INNER JOIN room h ON h.room_id = rh.room_id
+		INNER JOIN reservation r ON r.reservation_id = rh.reservation_id
+		WHERE rh.status = 1
+		AND r.status NOT IN ('Cancelada')
 		AND (
-			(rh.fechaentrada BETWEEN $1 AND $2)
-			OR (rh.fechasalida BETWEEN $1 AND $2)
-			OR (rh.fechaentrada < $1 AND rh.fechasalida > $2)
+			(rh.check_in_date BETWEEN $1 AND $2)
+			OR (rh.check_out_date BETWEEN $1 AND $2)
+			OR (rh.check_in_date < $1 AND rh.check_out_date > $2)
 		)
-		ORDER BY rh.fechaentrada
+		ORDER BY rh.check_in_date
 	`
 
 	rows, err := r.db.Query(query, fechaInicio, fechaFin)
