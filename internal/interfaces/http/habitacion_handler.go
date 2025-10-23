@@ -183,15 +183,3 @@ func (h *HabitacionHandler) GetAvailableRooms(c *fiber.Ctx) error {
 
 	return c.JSON(habitaciones)
 }
-
-// GetRoomTypes returns all available room types
-func (h *HabitacionHandler) GetRoomTypes(c *fiber.Ctx) error {
-	tipos, err := h.service.GetRoomTypes()
-	if err != nil {
-		log.Printf("Error getting room types: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": fmt.Sprintf("Error al obtener los tipos de habitación: %v", err),
-		})
-	}
-	return c.JSON(tipos)
-}
