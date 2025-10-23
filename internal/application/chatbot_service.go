@@ -2,11 +2,13 @@ package application
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
 	"github.com/Maxito7/hotel_backend/internal/domain"
 	"github.com/Maxito7/hotel_backend/internal/openai"
+	"github.com/Maxito7/hotel_backend/internal/tavily"
 	"github.com/google/uuid"
 )
 
@@ -14,17 +16,26 @@ type ChatbotService struct {
 	repo           domain.ChatbotRepository
 	openaiClient   *openai.Client
 	habitacionRepo domain.HabitacionRepository
+	tavilyClient   *tavily.Client
+	searchService  *SearchService
+	location       string
 }
 
 func NewChatbotService(
 	repo domain.ChatbotRepository,
 	openaiClient *openai.Client,
 	habitacionRepo domain.HabitacionRepository,
+	tavilyClient *tavily.Client,
+	location string,
+	searchService *SearchService,
 ) *ChatbotService {
 	return &ChatbotService{
 		repo:           repo,
 		openaiClient:   openaiClient,
 		habitacionRepo: habitacionRepo,
+		tavilyClient:   tavilyClient,
+		searchService:  searchService,
+		location:       location,
 	}
 }
 
@@ -56,14 +67,52 @@ func (s *ChatbotService) ProcessMessage(req domain.ChatRequest) (*domain.ChatRes
 		Content: req.Message,
 	})
 
+	var webContext string
+	useWeb := false
+	var tavilyResp *tavily.SearchResponse
+
+	// Decidir si usar búsqueda web: prioridad al flag del request (UseWeb)
+	if req.UseWeb != nil {
+		useWeb = *req.UseWeb
+	} else {
+		useWeb = s.shouldSearchWeb(req.Message)
+	}
+
+	if useWeb {
+		// Preferir SearchService si está disponible
+		log.Printf("Chatbot: performing web search message (near %s), useWeb=%v", s.location, useWeb)
+		// Construir query con ubicación para focalizar resultados locales
+		query := req.Message
+		if s.location != "" {
+			query = fmt.Sprintf("%s near %s", req.Message, s.location)
+		}
+
+		if s.searchService != nil {
+			input := SearchInput{Query: query, MaxResults: 3}
+			if resp, err := s.searchService.SearchWeb(input); err == nil {
+				tavilyResp = resp
+				webContext = s.formatWebResults(resp)
+			} else {
+				log.Printf("searchService error: %v", err)
+			}
+		} else if s.tavilyClient != nil {
+			if resp, err := s.tavilyClient.Search(tavily.SearchRequest{Query: query, MaxResults: 3}); err == nil {
+				tavilyResp = resp
+				webContext = s.formatWebResults(resp)
+			} else {
+				log.Printf("tavily search error: %v", err)
+			}
+		}
+	}
+
 	// 3. Obtener información real del hotel desde la BD
 	hotelInfo, err := s.getHotelInfo(req)
 	if err != nil {
 		return nil, fmt.Errorf("error getting hotel info: %w", err)
 	}
 
-	// 4. Preparar contexto con información real
-	systemPrompt := s.buildSystemPrompt(req.Context, hotelInfo)
+	// 4. Preparar contexto con información real (incluye resultados web si hay)
+	systemPrompt := s.buildSystemPrompt(req.Context, hotelInfo+webContext)
 
 	// 5. Construir mensajes para OpenAI/Groq
 	messages := []openai.Message{
@@ -131,15 +180,97 @@ func (s *ChatbotService) ProcessMessage(req domain.ChatRequest) (*domain.ChatRes
 	// 11. Generar acciones sugeridas
 	suggestedActions := s.generateSuggestedActions(req.Message, assistantMessage)
 
+	sources := []string{"hotel"}
+	if useWeb {
+		sources = append(sources, "web")
+	}
+
+	metadata := map[string]interface{}{
+		"tokensUsed": openaiResp.Usage.TotalTokens,
+		"sources":    sources,
+	}
+	// incluir resultados web crudos para uso del frontend (si existen)
+	if tavilyResp != nil {
+		metadata["webResults"] = tavilyResp
+	}
+
 	return &domain.ChatResponse{
 		Message:          assistantMessage,
 		ConversationID:   conversation.ID,
 		SuggestedActions: suggestedActions,
 		RequiresHuman:    requiresHuman,
-		Metadata: map[string]interface{}{
-			"tokensUsed": openaiResp.Usage.TotalTokens,
-		},
+		Metadata:         metadata,
 	}, nil
+}
+
+func (s *ChatbotService) shouldSearchWeb(message string) bool {
+	messageLower := strings.ToLower(message)
+
+	webKeywords := []string{
+		"clima", "weather", "temperatura",
+		"restaurantes cerca", "donde comer", "dónde comer",
+		"atracciones", "lugares para visitar", "que hacer", "qué hacer", "que visitar",
+		"eventos", "festivales",
+		"transporte", "como llegar", "cómo llegar", "taxi", "bus", "uber", "metropolitano",
+		"aeropuerto", "vuelo", "flight", "terminal",
+		"noticias", "actualidad",
+	}
+
+	for _, keyword := range webKeywords {
+		if strings.Contains(messageLower, keyword) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (s *ChatbotService) searchWeb(query string) (string, error) {
+	fullQuery := query
+	if s.location != "" {
+		fullQuery += " near " + s.location
+	}
+	req := tavily.SearchRequest{
+		Query:      fullQuery,
+		MaxResults: 3,
+	}
+
+	resp, err := s.tavilyClient.Search(req)
+	if err != nil {
+		return "", err
+	}
+	return s.formatWebResults(resp), nil
+}
+
+func (s *ChatbotService) formatWebResults(resp *tavily.SearchResponse) string {
+	if resp == nil {
+		return ""
+	}
+
+	var sb strings.Builder
+
+	sb.WriteString("\n===INFORMACIÓN DE LA WEB (BÚSQUEDA EXTERNA) ===\n")
+	sb.WriteString(fmt.Sprintf("Consulta: %s\n\n", resp.Query))
+
+	for i, r := range resp.Results {
+		sb.WriteString(fmt.Sprintf("%d. %s\n", i+1, r.Title))
+		if r.Content != "" {
+			content := r.Content
+			if len(content) > 300 {
+				content = content[:300] + "..."
+			}
+			sb.WriteString(fmt.Sprintf("   Contenido: %s\n", content))
+		}
+		if r.URL != "" {
+			sb.WriteString(fmt.Sprintf("  Fuente: %s\n", r.URL))
+		}
+		sb.WriteString("\n")
+		if i >= 2 {
+			break
+		}
+	}
+	sb.WriteString("==== FIN INFORMACIÓN WEB ====\n\n")
+	return sb.String()
 }
 
 // Nueva función para obtener información real del hotel
@@ -171,6 +302,36 @@ func (s *ChatbotService) getHotelInfo(req domain.ChatRequest) (string, error) {
 		info.WriteString(fmt.Sprintf("  - Camas: %d\n", tipo.CantidadCamas))
 		info.WriteString(fmt.Sprintf("  - Descripción: %s\n", tipo.Descripcion))
 	}
+	info.WriteString("\nDISPONIBILIDAD:\n")
+	fechasInicio := time.Now()
+	fechasFin := fechasInicio.AddDate(0, 0, 30) // Próximos 30 días
+
+	disponibles, err := s.habitacionRepo.GetAvailableRooms(fechasInicio, fechasFin)
+	if err == nil {
+		info.WriteString(fmt.Sprintf("Habitaciones disponibles para el próximo mes (%s - %s): %d\n",
+			fechasInicio.Format("2006-01-02"), fechasFin.Format("2006-01-02"), len(disponibles)))
+	} else {
+		// si falla, no romper; solo no incluimos la línea de disponibilidad
+		fmt.Printf("Warning: no se pudo obtener disponibilidad próxima: %v\n", err)
+	}
+
+	// 3. Información general del hotel
+	info.WriteString("\n=== INFORMACIÓN GENERAL ===\n")
+	if s.location != "" {
+		info.WriteString(fmt.Sprintf("• Ubicación: %s\n", s.location))
+	} else {
+		info.WriteString("• Ubicación: [Definir en config]\n")
+	}
+	info.WriteString("• Check-in: 14:00 hrs\n")
+	info.WriteString("• Check-out: 12:00 hrs\n")
+	info.WriteString("• WiFi: Gratuito en todas las áreas\n")
+	info.WriteString("• Estacionamiento: Disponible\n")
+
+	// 4. Políticas
+	info.WriteString("\n=== POLÍTICAS ===\n")
+	info.WriteString("• Cancelación gratuita hasta 48 horas antes\n")
+	info.WriteString("• Mascotas: No permitidas\n")
+	info.WriteString("• Métodos de pago: Efectivo, tarjeta, transferencia\n")
 
 	// 2. Si hay contexto de fechas, obtener disponibilidad
 	if req.Context != nil && req.Context.FechaEntrada != nil && req.Context.FechaSalida != nil {
@@ -210,11 +371,12 @@ func (s *ChatbotService) buildSystemPrompt(context *domain.ChatContext, hotelInf
 	basePrompt := `Eres un asistente virtual amable y profesional de un hotel en Lima, Perú. 
 
 INSTRUCCIONES CRÍTICAS:
-1. SOLO usa la información real proporcionada más abajo en "INFORMACIÓN REAL DEL HOTEL"
-2. NUNCA inventes precios, tipos de habitaciones o disponibilidad
-3. Si no tienes la información específica, admítelo y ofrece alternativas
-4. Sé preciso con los precios - usa EXACTAMENTE los precios de la base de datos
-5. Si el usuario pregunta por disponibilidad y no tienes las fechas, pídelas
+- Si te preguntan sobre información externa (clima, restaurantes, atracciones), 
+  usarás la información proporcionada en "INFORMACIÓN DE LA WEB".
+- Si no hay información web disponible, indica que no tienes esos datos en tiempo real.
+- Para información del hotel, usa siempre los datos reales proporcionados.
+- Sé amable, profesional y conciso.
+- Responde en español.
 
 Tu objetivo es ayudar a los huéspedes con:
 - Información sobre habitaciones (SOLO las que aparecen en la información real)

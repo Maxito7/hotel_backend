@@ -22,7 +22,7 @@ type Reserva struct {
 	ClienteID         string              `json:"clienteId"`
 	Subtotal          float64             `json:"subtotal"`
 	Descuento         float64             `json:"descuento"`
-	FechaConfirmacion *time.Time          `json:"fechaConfirmacion,omitempty"`
+	FechaConfirmacion time.Time           `json:"fechaConfirmacion"`
 	Habitaciones      []ReservaHabitacion `json:"habitaciones"`
 }
 
