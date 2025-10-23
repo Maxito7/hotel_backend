@@ -23,25 +23,25 @@ func NewHabitacionRepository(db *sql.DB) domain.HabitacionRepository {
 func (r *habitacionRepository) GetAllRooms() ([]domain.Habitacion, error) {
 	query := `
 		SELECT 
-			h.habitacionid,
-			h.nombre,
-			h.numero,
-			h.capacidad,
-			h.estado,
-			h.descripciongeneral,
-			t.tipohabitacionid,
-			t.titulo,
-			t.descripcion,
-			t.capacidadadultos,
-			t.capacidadninhos,
-			t.cantidadcamas,
-			t.precio
+			h.room_id,
+			h.name,
+			h.number,
+			h.capacity,
+			h.status,
+			h.general_description,
+			t.room_type_id,
+			t.title,
+			t.description,
+			t.adult_capacity,
+			t.children_capacity,
+			t.beds_count,
+			t.price
 		FROM 
-			habitacion h
+			room h
 		INNER JOIN 
-			tipohabitacion t ON h.tipohabitacionid = t.tipohabitacionid
+			room_type t ON h.room_type_id = t.room_type_id
 		ORDER BY 
-			h.habitacionid;`
+			h.room_id;`
 
 	rows, err := r.db.Query(query)
 	if err != nil {
@@ -92,18 +92,18 @@ func (r *habitacionRepository) GetDisponibilidadFechas(desde, hasta time.Time) (
 		),
 		habitaciones_totales AS (
 			SELECT COUNT(*) as total
-			FROM habitacion
-			WHERE estado = 'Disponible'
+			FROM room
+			WHERE status = 'Disponible'
 		),
 		habitaciones_ocupadas AS (
 			SELECT date(f.fecha) as fecha, 
-				   COUNT(DISTINCT rh.habitacionid) as ocupadas
+				   COUNT(DISTINCT rh.room_id) as ocupadas
 			FROM fechas f
-			LEFT JOIN reservaxhabitacion rh ON 
-				date(f.fecha) BETWEEN date(rh.fechaentrada) AND date(rh.fechasalida)
-			LEFT JOIN reserva r ON r.reservaid = rh.reservaid
-				AND rh.estado = 1
-				AND r.estado = 'Confirmada'
+			LEFT JOIN reservation_room rh ON 
+				date(f.fecha) BETWEEN date(rh.check_in_date) AND date(rh.check_out_date)
+			LEFT JOIN reservation r ON r.reservation_id = rh.reservation_id
+				AND rh.status = 1
+				AND r.status = 'Confirmada'
 			GROUP BY date(f.fecha)
 		)
 		SELECT 
@@ -153,20 +153,20 @@ func (r *habitacionRepository) GetFechasBloqueadas(desde, hasta time.Time) (*dom
 		),
 		habitaciones_totales AS (
 			SELECT COUNT(*) as total
-			FROM habitacion h
-			WHERE h.estado = 'Disponible'
+			FROM room h
+			WHERE h.status = 'Disponible'
 		),
 		habitaciones_ocupadas AS (
 			SELECT date(f.fecha) as fecha, 
-				   COUNT(DISTINCT rh.habitacionid) as habitaciones_ocupadas
+				   COUNT(DISTINCT rh.room_id) as habitaciones_ocupadas
 			FROM fechas f
-			LEFT JOIN reservaxhabitacion rh ON 
-				f.fecha BETWEEN cast(rh.fechaentrada as date) AND cast(rh.fechasalida as date)
-			LEFT JOIN reserva r ON r.reservaid = rh.reservaid
-				AND rh.estado = 1
-				AND r.estado = 'Confirmada'
+			LEFT JOIN reservation_room rh ON 
+				f.fecha BETWEEN cast(rh.check_in_date as date) AND cast(rh.check_out_date as date)
+			LEFT JOIN reservation r ON r.reservation_id = rh.reservation_id
+				AND rh.status = 1
+				AND r.status = 'Confirmada'
 			GROUP BY f.fecha
-			HAVING COUNT(DISTINCT rh.habitacionid) >= (SELECT total FROM habitaciones_totales)
+			HAVING COUNT(DISTINCT rh.room_id) >= (SELECT total FROM habitaciones_totales)
 		)
 		SELECT fecha::date
 		FROM habitaciones_ocupadas
@@ -201,39 +201,39 @@ func (r *habitacionRepository) GetFechasBloqueadas(desde, hasta time.Time) (*dom
 func (r *habitacionRepository) GetAvailableRooms(fechaEntrada, fechaSalida time.Time) ([]domain.Habitacion, error) {
 	query := `
 		SELECT DISTINCT 
-			h.habitacionid,
-			h.nombre,
-			h.numero,
-			h.capacidad,
-			h.estado,
-			h.descripciongeneral,
-			t.tipohabitacionid,
-			t.titulo,
-			t.descripcion,
-			t.capacidadadultos,
-			t.capacidadninhos,
-			t.cantidadcamas,
-			t.precio
+			h.room_id,
+			h.name,
+			h.number,
+			h.capacity,
+			h.status,
+			h.general_description,
+			t.room_type_id,
+			t.title,
+			t.description,
+			t.adult_capacity,
+			t.children_capacity,
+			t.beds_count,
+			t.price
 		FROM 
-			habitacion h
+			room h
 		INNER JOIN 
-			tipohabitacion t ON h.tipohabitacionid = t.tipohabitacionid
+			room_type t ON h.room_type_id = t.room_type_id
 		WHERE 
-			h.estado = 'Disponible'
+			h.status = 'Disponible'
 			AND NOT EXISTS (
-				SELECT 1 FROM reservaxhabitacion rh
-				JOIN reserva r ON r.reservaid = rh.reservaid
-				WHERE rh.habitacionid = h.habitacionid
-				AND rh.estado = 1
-				AND r.estado = 'Confirmada'
+				SELECT 1 FROM reservation_room rh
+				JOIN reservation r ON r.reservation_id = rh.reservation_id
+				WHERE rh.room_id = h.room_id
+				AND rh.status = 1
+				AND r.status = 'Confirmada'
 				AND (
-					(rh.fechaentrada <= $1 AND rh.fechasalida >= $1)
-					OR (rh.fechaentrada <= $2 AND rh.fechasalida >= $2)
-					OR (rh.fechaentrada >= $1 AND rh.fechasalida <= $2)
+					(rh.check_in_date <= $1 AND rh.check_out_date >= $1)
+					OR (rh.check_in_date <= $2 AND rh.check_out_date >= $2)
+					OR (rh.check_in_date >= $1 AND rh.check_out_date <= $2)
 				)
 			)
 		ORDER BY 
-			h.habitacionid;`
+			h.room_id;`
 
 	rows, err := r.db.Query(query, fechaEntrada, fechaSalida)
 	if err != nil {
@@ -272,19 +272,21 @@ func (r *habitacionRepository) GetAvailableRooms(fechaEntrada, fechaSalida time.
 	return habitaciones, nil
 }
 
-// GetRoomTypes returns all available room types
+// GetRoomTypes implements domain.HabitacionRepository
 func (r *habitacionRepository) GetRoomTypes() ([]domain.TipoHabitacion, error) {
 	query := `
 		SELECT 
-			t.tipohabitacionid,
-			t.titulo,
-			t.descripcion,
-			t.capacidadadultos,
-			t.capacidadninhos,
-			t.cantidadcamas,
-			t.precio
-		FROM tipohabitacion t
-		ORDER BY t.tipohabitacionid;`
+			room_type_id,
+			title,
+			description,
+			adult_capacity,
+			children_capacity,
+			beds_count,
+			price
+		FROM 
+			room_type
+		ORDER BY 
+			room_type_id;`
 
 	rows, err := r.db.Query(query)
 	if err != nil {
@@ -292,26 +294,27 @@ func (r *habitacionRepository) GetRoomTypes() ([]domain.TipoHabitacion, error) {
 	}
 	defer rows.Close()
 
-	var tipos []domain.TipoHabitacion
+	var roomTypes []domain.TipoHabitacion
 	for rows.Next() {
-		var t domain.TipoHabitacion
-		if err := rows.Scan(
-			&t.ID,
-			&t.Titulo,
-			&t.Descripcion,
-			&t.CapacidadAdultos,
-			&t.CapacidadNinhos,
-			&t.CantidadCamas,
-			&t.Precio,
-		); err != nil {
+		var rt domain.TipoHabitacion
+		err := rows.Scan(
+			&rt.ID,
+			&rt.Titulo,
+			&rt.Descripcion,
+			&rt.CapacidadAdultos,
+			&rt.CapacidadNinhos,
+			&rt.CantidadCamas,
+			&rt.Precio,
+		)
+		if err != nil {
 			return nil, fmt.Errorf("error scanning room type: %w", err)
 		}
-		tipos = append(tipos, t)
+		roomTypes = append(roomTypes, rt)
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating room types: %w", err)
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating room types rows: %w", err)
 	}
 
-	return tipos, nil
+	return roomTypes, nil
 }
