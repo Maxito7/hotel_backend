@@ -10,6 +10,7 @@ import (
 	"github.com/Maxito7/hotel_backend/internal/infrastructure/repository"
 	handlers "github.com/Maxito7/hotel_backend/internal/interfaces/http"
 	"github.com/Maxito7/hotel_backend/internal/openai"
+	services "github.com/Maxito7/hotel_backend/internal/service"
 	"github.com/Maxito7/hotel_backend/internal/tavily"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -89,6 +90,10 @@ func main() {
 	reservaService := application.NewReservaService(reservaRepo, reservaHabitacionRepo, habitacionRepo, emailClient)
 	reservaHandler := handlers.NewReservaHandler(reservaService)
 
+	// S3
+	S3Service, err := services.NewS3Service()
+	S3Handler := handlers.NewS3Handler(S3Service)
+
 	api := app.Group("/api")
 
 	// Rutas existentes
@@ -127,6 +132,10 @@ func main() {
 	reservas.Post("/:id/confirmar-pago", reservaHandler.ConfirmarPago) // NUEVO: Confirma pago y envía email
 	reservas.Post("/verificar-disponibilidad", reservaHandler.VerificarDisponibilidad)
 	reservas.Get("/rango", reservaHandler.GetReservasEnRango)
+
+	// Rutas de S3
+	s3 := api.Group("/upload")
+	s3.Post("/imagenes", S3Handler.HandleUploadFile)
 
 	log.Printf("Server starting on port %s", cfg.ServerPort)
 	if err := app.Listen(":" + cfg.ServerPort); err != nil {
